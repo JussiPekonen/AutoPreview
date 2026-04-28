@@ -19,7 +19,7 @@ extension PreviewTestableView {
     @ViewBuilder
     public static func generatePreviews() -> some View {
         let viewIdentifier = String(describing: Self.self)
-        let keys = Self.previewData.keys.sorted()
+        let keys = Self.previewData.keys.map { String($0) }
         ForEach(keys, id: \.self) { key in
             if let data = Self.previewData[key] {
                 Self.previewBuilder(data)
@@ -29,5 +29,3 @@ extension PreviewTestableView {
 
     }
 }
-
-
