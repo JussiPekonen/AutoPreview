@@ -20,7 +20,7 @@ guard let outputPath else {
 }
 
 // Recursively walk a SourceKit structure dictionary and collect names of types/extensions
-// that list PreviewTestableView in their inherited types.
+// that list AutoPreviewable in their inherited types.
 func findConformances(in dict: [String: SourceKitRepresentable]) -> [String] {
     var results: [String] = []
 
@@ -40,7 +40,7 @@ func findConformances(in dict: [String: SourceKitRepresentable]) -> [String] {
        let inheritedTypes = inheritedValue as? [SourceKitRepresentable] {
         let conformsToPreviewTestableView = inheritedTypes.contains { entry in
             guard let entryDict = entry as? [String: SourceKitRepresentable] else { return false }
-            return (entryDict[SwiftDocKey.name.rawValue] as? String) == "PreviewTestableView"
+            return (entryDict[SwiftDocKey.name.rawValue] as? String) == "AutoPreviewable"
         }
         if conformsToPreviewTestableView {
             results.append(name)
