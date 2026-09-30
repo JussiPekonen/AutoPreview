@@ -1,31 +1,37 @@
 import SwiftUI
 
 public protocol AutoPreviewable {
-    associatedtype PTD
-    associatedtype PV: View
+    associatedtype APTD
+    associatedtype APV: View
 
-    /// Preview data for the View. A `[String: PTD]` map where
-    /// - `key` is the "name" of the preview data and
-    /// - `value` is the data to the set for the preview data.
-    /// `PTD` is a generic class that
-    static var previewData: [String: PTD] { get }
+    /// Preview data for the View. An array of named data stubs, where
+    /// each `PreviewData`'s `description` is the "name" of that preview
+    /// and `data` is the value to set for it.
+    /// `APTD` is a generic class that provides preview test data
+    static var previewData: [PreviewData<APTD>] { get }
 
     /// Preview builder function that takes a
     @ViewBuilder
-    static func previewBuilder(_ data: PTD) -> PV
+    static func previewBuilder(data: APTD) -> APV
+}
+
+public struct PreviewData<APTD>: CustomStringConvertible {
+    public let description: String
+    public let data: APTD
+
+    public init(_ description: String, _ data: APTD) {
+        self.description = description
+        self.data = data
+    }
 }
 
 extension AutoPreviewable {
     @ViewBuilder
-    public static func generatePreviews() -> some View {
+    public static func autoPreview() -> some View {
         let viewIdentifier = String(describing: Self.self)
-        let keys = Self.previewData.keys.map { String($0) }
-        ForEach(keys, id: \.self) { key in
-            if let data = Self.previewData[key] {
-                Self.previewBuilder(data)
-                    .previewDisplayName("\(viewIdentifier) / \(key)")
-            }
+        ForEach(Self.previewData, id: \.description) { item in
+            Self.previewBuilder(data: item.data)
+                .previewDisplayName("\(viewIdentifier) / \(item.description)")
         }
-
     }
 }

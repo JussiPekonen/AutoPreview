@@ -1,47 +1,55 @@
 // swift-tools-version: 6.3
-// The swift-tools-version declares the minimum version of Swift required to build this package.
-
+import CompilerPluginSupport
 import PackageDescription
 
 let package = Package(
     name: "AutoPreview",
-    platforms: [
-        .iOS(.v17),
-        .macOS(.v13),
-    ],
+    platforms: [.macOS(.v13), .iOS(.v16), .tvOS(.v16), .watchOS(.v9)],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "AutoPreview",
-            targets: ["AutoPreview"]
-        ),
-        .plugin(
-            name: "GeneratePreviewMapper",
-            targets: ["GeneratePreviewMapper"]
-        ),
+        .library(name: "AutoPreview", targets: ["AutoPreview"]),
+        .plugin(name: "TestablePreviewsPlugin", targets: ["TestablePreviewsPlugin"])
     ],
     dependencies: [
-        .package(url: "https://github.com/jpsim/SourceKitten.git", from: "0.34.0"),
+        .package(url: "https://github.com/apple/swift-syntax.git", from: "603.0.2")
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
+        .macro(
+            name: "AutoPreviewMacros",
+            dependencies: [
+                .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
+                .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
+            ]
+        ),
         .target(
-            name: "AutoPreview"
+            name: "AutoPreview",
+            dependencies: ["AutoPreviewMacros"]
         ),
         .executableTarget(
-            name: "GeneratePreviewMapperTool",
+            name: "TestablePreviewsGenerator",
             dependencies: [
-                .product(name: "SourceKittenFramework", package: "SourceKitten"),
-            ],
-            // SourceKitten predates Swift 6 strict concurrency; use v5 mode for the tool
-            swiftSettings: [.swiftLanguageMode(.v5)]
+                .product(name: "SwiftParser", package: "swift-syntax"),
+                .product(name: "SwiftSyntax", package: "swift-syntax")
+            ]
         ),
         .plugin(
-            name: "GeneratePreviewMapper",
+            name: "TestablePreviewsPlugin",
             capability: .buildTool(),
-            dependencies: ["GeneratePreviewMapperTool"]
+            dependencies: ["TestablePreviewsGenerator"]
         ),
+        .testTarget(
+            name: "AutoPreviewMacrosTests",
+            dependencies: [
+                "AutoPreviewMacros",
+                .product(name: "SwiftSyntaxMacrosTestSupport", package: "swift-syntax")
+            ]
+        ),
+        .testTarget(
+            name: "TestablePreviewsGeneratorTests",
+            dependencies: [
+                "TestablePreviewsGenerator",
+                .product(name: "SwiftParser", package: "swift-syntax")
+            ]
+        )
     ],
     swiftLanguageModes: [.v6]
 )
