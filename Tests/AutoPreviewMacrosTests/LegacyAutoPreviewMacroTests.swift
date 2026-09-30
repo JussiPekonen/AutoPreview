@@ -10,13 +10,18 @@ struct LegacyAutoPreviewMacroTests {
         "AutoPreview": LegacyAutoPreviewMacro.self
     ]
 
-    @Test("Expands on its own to just the PreviewProvider struct")
+    @Test("Expands on its own to just the PreviewProvider struct, as a peer declaration")
     func expansion() {
         assertMacroExpansion(
             """
-            #AutoPreview(GreetingCard.self)
+            @AutoPreview
+            struct GreetingCard {
+            }
             """,
             expandedSource: """
+            struct GreetingCard {
+            }
+
             struct GreetingCard_Previews: PreviewProvider {
                 static var previews: some View {
                     GreetingCard.autoPreview()
@@ -27,13 +32,40 @@ struct LegacyAutoPreviewMacroTests {
         )
     }
 
-    @Test("Expands a namespaced type name into a valid, sanitized struct name")
-    func expansionWithNamespacedType() {
+    @Test("Works when attached to an extension declaring AutoPreviewable conformance")
+    func expansionOnExtension() {
         assertMacroExpansion(
             """
-            #AutoPreview(Feature.GreetingCard.self)
+            @AutoPreview
+            extension GreetingCard: AutoPreviewable {
+            }
             """,
             expandedSource: """
+            extension GreetingCard: AutoPreviewable {
+            }
+
+            struct GreetingCard_Previews: PreviewProvider {
+                static var previews: some View {
+                    GreetingCard.autoPreview()
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Sanitizes a qualified extended type into a valid, unique struct name")
+    func expansionOnQualifiedExtension() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            extension Feature.GreetingCard: AutoPreviewable {
+            }
+            """,
+            expandedSource: """
+            extension Feature.GreetingCard: AutoPreviewable {
+            }
+
             struct Feature_GreetingCard_Previews: PreviewProvider {
                 static var previews: some View {
                     Feature.GreetingCard.autoPreview()
@@ -44,16 +76,19 @@ struct LegacyAutoPreviewMacroTests {
         )
     }
 
-    @Test("A malformed argument emits an error and expands to nothing")
-    func missingSelfArgumentEmitsDiagnostic() {
+    @Test("Attaching to something that names no type at all emits an error and expands to nothing")
+    func nonTypeDeclarationEmitsDiagnostic() {
         assertMacroExpansion(
             """
-            #AutoPreview(GreetingCard())
+            @AutoPreview
+            var greetingCard: Int
             """,
-            expandedSource: "",
+            expandedSource: """
+            var greetingCard: Int
+            """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "#AutoPreview requires a single argument of the form `MyView.self`",
+                    message: "@AutoPreview can only be attached to a struct, class, enum, actor, or extension declaration",
                     line: 1,
                     column: 1
                 )

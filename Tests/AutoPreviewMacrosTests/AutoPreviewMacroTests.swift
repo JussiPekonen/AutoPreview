@@ -17,13 +17,18 @@ struct AutoPreviewMacroTests {
     // below 6.4, `AutoPreviewMacro` itself would only ever produce the
     // fallback struct, and these two would need to expect that instead.
 
-    @Test("Expands a basic #AutoPreview call into the #Preview(arguments:) form")
+    @Test("Expands to the #Preview(arguments:) form as a peer declaration")
     func expansion() {
         assertMacroExpansion(
             """
-            #AutoPreview(GreetingCard.self)
+            @AutoPreview
+            struct GreetingCard {
+            }
             """,
             expandedSource: """
+            struct GreetingCard {
+            }
+
             #Preview("GreetingCard", arguments: GreetingCard.previewData) { item in
                 GreetingCard.previewBuilder(data: item.data)
             }
@@ -32,13 +37,82 @@ struct AutoPreviewMacroTests {
         )
     }
 
-    @Test("Expands a namespaced type name by referencing it directly, no sanitizing needed")
-    func expansionWithNamespacedType() {
+    @Test("Works when attached to a class, enum, or actor declaration too")
+    func expansionOnOtherDeclarationKinds() {
         assertMacroExpansion(
             """
-            #AutoPreview(Feature.GreetingCard.self)
+            @AutoPreview
+            actor GreetingCard {
+            }
             """,
             expandedSource: """
+            actor GreetingCard {
+            }
+
+            #Preview("GreetingCard", arguments: GreetingCard.previewData) { item in
+                GreetingCard.previewBuilder(data: item.data)
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Refers to a nested type by its simple name, resolved correctly from the enclosing scope")
+    func expansionOnNestedType() {
+        assertMacroExpansion(
+            """
+            enum Feature {
+                @AutoPreview
+                struct GreetingCard {
+                }
+            }
+            """,
+            expandedSource: """
+            enum Feature {
+                struct GreetingCard {
+                }
+
+                #Preview("GreetingCard", arguments: GreetingCard.previewData) { item in
+                    GreetingCard.previewBuilder(data: item.data)
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Works when attached to an extension declaring AutoPreviewable conformance")
+    func expansionOnExtension() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            extension GreetingCard: AutoPreviewable {
+            }
+            """,
+            expandedSource: """
+            extension GreetingCard: AutoPreviewable {
+            }
+
+            #Preview("GreetingCard", arguments: GreetingCard.previewData) { item in
+                GreetingCard.previewBuilder(data: item.data)
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Refers to a type extended by its qualified name, exactly as the extension itself wrote it")
+    func expansionOnQualifiedExtension() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            extension Feature.GreetingCard: AutoPreviewable {
+            }
+            """,
+            expandedSource: """
+            extension Feature.GreetingCard: AutoPreviewable {
+            }
+
             #Preview("Feature.GreetingCard", arguments: Feature.GreetingCard.previewData) { item in
                 Feature.GreetingCard.previewBuilder(data: item.data)
             }
@@ -47,19 +121,19 @@ struct AutoPreviewMacroTests {
         )
     }
 
-    @Test("A malformed argument emits an error and expands to nothing")
-    func missingSelfArgumentEmitsDiagnostic() {
-        // The guard fails before any declaration is produced, so the macro
-        // returns zero declarations — meaning the call site is removed
-        // entirely, not left in place.
+    @Test("Attaching to something that names no type at all emits an error and expands to nothing")
+    func nonTypeDeclarationEmitsDiagnostic() {
         assertMacroExpansion(
             """
-            #AutoPreview(GreetingCard())
+            @AutoPreview
+            var greetingCard: Int
             """,
-            expandedSource: "",
+            expandedSource: """
+            var greetingCard: Int
+            """,
             diagnostics: [
                 DiagnosticSpec(
-                    message: "#AutoPreview requires a single argument of the form `MyView.self`",
+                    message: "@AutoPreview can only be attached to a struct, class, enum, actor, or extension declaration",
                     line: 1,
                     column: 1
                 )
