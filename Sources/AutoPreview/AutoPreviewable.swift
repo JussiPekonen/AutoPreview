@@ -26,6 +26,9 @@ public struct PreviewData<APTD>: CustomStringConvertible {
 }
 
 extension AutoPreviewable {
+    #if swift(>=6.4)
+    @available(*, deprecated, message: "Remove the whole PreviewProvider block that calls autoPreview() and regenerate the #Preview block by attaching @AutoPreview again.")
+    #endif
     @ViewBuilder
     public static func autoPreview() -> some View {
         let viewIdentifier = String(describing: Self.self)
