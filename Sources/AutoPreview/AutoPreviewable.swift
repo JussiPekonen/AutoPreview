@@ -1,5 +1,6 @@
 import SwiftUI
 
+@MainActor
 public protocol AutoPreviewable {
     associatedtype APTD
     associatedtype APV: View

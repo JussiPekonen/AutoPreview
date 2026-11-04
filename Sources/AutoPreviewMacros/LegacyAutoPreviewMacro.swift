@@ -28,7 +28,7 @@ public struct LegacyAutoPreviewMacro: PeerMacro, Sendable {
             return []
         }
 
-        return [previewDeclaration(forType: typeName)]
+        return [previewDeclaration(forType: typeName, attachedTo: declaration, in: context)]
     }
 
     /// Builds the fallback `PreviewProvider` declaration for an
@@ -36,8 +36,12 @@ public struct LegacyAutoPreviewMacro: PeerMacro, Sendable {
     /// (rather than `expansion(of:providingPeersOf:in:)`) once it has
     /// parsed the argument itself, so a malformed attachment is only ever
     /// diagnosed once.
-    static func previewDeclaration(forType typeName: String) -> DeclSyntax {
-        let previewsStructName = "\(AutoPreviewMacroArgument.sanitizedIdentifier(from: typeName))_Previews"
+    static func previewDeclaration(
+        forType typeName: String,
+        attachedTo declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) -> DeclSyntax {
+        let previewsStructName = previewsStructName(forType: typeName, attachedTo: declaration, in: context)
 
         return """
         struct \(raw: previewsStructName): PreviewProvider {
@@ -46,5 +50,28 @@ public struct LegacyAutoPreviewMacro: PeerMacro, Sendable {
             }
         }
         """
+    }
+
+    /// `@AutoPreview` declares its peer as `names: suffixed(_Previews)`,
+    /// which only covers `<name>_Previews` for a declaration that *has* a
+    /// name of its own. An extension doesn't — so a `<Type>_Previews`
+    /// struct generated next to one is rejected as "not covered by macro
+    /// 'AutoPreview'". (`names: arbitrary` isn't an option either: peer
+    /// macros may not introduce arbitrary names at global scope, which is
+    /// exactly where extensions usually live.) Names from
+    /// `makeUniqueName(_:)` are exempt from that coverage check, so an
+    /// extension gets one of those instead; nothing refers to the struct
+    /// by name anyway — each preview's display name comes from
+    /// `autoPreview()` itself.
+    private static func previewsStructName(
+        forType typeName: String,
+        attachedTo declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) -> String {
+        let readableName = "\(AutoPreviewMacroArgument.sanitizedIdentifier(from: typeName))_Previews"
+        guard declaration.is(ExtensionDeclSyntax.self) else {
+            return readableName
+        }
+        return context.makeUniqueName(readableName).text
     }
 }

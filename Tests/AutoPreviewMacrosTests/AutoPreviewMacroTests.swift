@@ -235,7 +235,7 @@ struct AutoPreviewMacroTests {
             extension GreetingCard: AutoPreviewable {
             }
 
-            struct GreetingCard_Previews: PreviewProvider {
+            struct __macro_local_21GreetingCard_PreviewsfMu_: PreviewProvider {
                 static var previews: some View {
                     GreetingCard.autoPreview()
                 }
@@ -257,7 +257,7 @@ struct AutoPreviewMacroTests {
             extension Feature.GreetingCard: AutoPreviewable {
             }
 
-            struct Feature_GreetingCard_Previews: PreviewProvider {
+            struct __macro_local_29Feature_GreetingCard_PreviewsfMu_: PreviewProvider {
                 static var previews: some View {
                     Feature.GreetingCard.autoPreview()
                 }

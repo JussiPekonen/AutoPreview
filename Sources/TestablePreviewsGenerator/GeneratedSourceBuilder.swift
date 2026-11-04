@@ -58,6 +58,7 @@ enum GeneratedSourceBuilder {
         /// tests substitute one of its previews at runtime. Deliberately
         /// internal (module-private): not exposed as part of this module's
         /// public API.
+        @MainActor
         final class TestablePreviews {
             /// Returns `content()` normally. In DEBUG builds, if the
             /// process environment has both `TEST_VIEW_TAG` and

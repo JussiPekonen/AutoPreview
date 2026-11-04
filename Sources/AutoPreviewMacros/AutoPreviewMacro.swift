@@ -73,10 +73,14 @@ public struct AutoPreviewMacro: PeerMacro, Sendable {
             return []
         }
 
-        return [previewDeclaration(forType: typeName)]
+        return [previewDeclaration(forType: typeName, attachedTo: declaration, in: context)]
     }
 
-    private static func previewDeclaration(forType typeName: String) -> DeclSyntax {
+    private static func previewDeclaration(
+        forType typeName: String,
+        attachedTo declaration: some DeclSyntaxProtocol,
+        in context: some MacroExpansionContext
+    ) -> DeclSyntax {
         #if swift(>=6.4)
         return """
         #Preview("\(raw: typeName)", arguments: \(raw: typeName).previewData) { item in
@@ -84,7 +88,7 @@ public struct AutoPreviewMacro: PeerMacro, Sendable {
         }
         """
         #else
-        return LegacyAutoPreviewMacro.previewDeclaration(forType: typeName)
+        return LegacyAutoPreviewMacro.previewDeclaration(forType: typeName, attachedTo: declaration, in: context)
         #endif
     }
 }
