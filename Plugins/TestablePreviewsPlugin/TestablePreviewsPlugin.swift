@@ -38,7 +38,7 @@ struct TestablePreviewsPlugin: BuildToolPlugin {
         return .buildCommand(
             displayName: displayName,
             executable: generatorToolURL,
-            arguments: ["--output", outputFileURL.path()] + swiftFiles.map { $0.path() },
+            arguments: ["--output", outputFileURL.path(percentEncoded: false)] + swiftFiles.map { $0.path(percentEncoded: false) },
             inputFiles: swiftFiles,
             outputFiles: [outputFileURL]
         )
