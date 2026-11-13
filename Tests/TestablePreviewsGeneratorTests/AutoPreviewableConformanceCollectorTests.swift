@@ -115,6 +115,21 @@ struct GeneratedSourceBuilderTests {
         #expect(occurrences == 1)
     }
 
+    @Test("Matches a back-ticked name both as written and without backticks")
+    func backtickedNameMatchesBothSpellings() {
+        let source = GeneratedSourceBuilder.makeSource(conformingTypeNames: ["Feature.`My View`"])
+        #expect(source.contains(#"case "Feature.My View", "Feature.`My View`":"#))
+        #expect(source.contains("return AnyView(Feature.`My View`.previewBuilder(data: data))"))
+    }
+
+    @Test("Merges spellings that differ only in backticks into a single switch case")
+    func backtickVariantsAreMerged() {
+        let source = GeneratedSourceBuilder.makeSource(conformingTypeNames: ["GreetingCard", "`GreetingCard`"])
+        #expect(source.contains(#"case "GreetingCard", "`GreetingCard`":"#))
+        let occurrences = source.components(separatedBy: "case ").count - 1
+        #expect(occurrences == 1)
+    }
+
     @Test("Escapes quotes and backslashes in the switch case label defensively")
     func escapesSpecialCharacters() {
         let source = GeneratedSourceBuilder.makeSource(conformingTypeNames: [#"Weird"Name"#])

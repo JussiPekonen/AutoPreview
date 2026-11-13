@@ -1,4 +1,5 @@
 import SwiftDiagnostics
+import SwiftParser
 import SwiftSyntax
 import SwiftSyntaxMacros
 
@@ -53,13 +54,53 @@ enum AutoPreviewMacroArgument {
         return name
     }
 
-    /// Turns something like `Namespace.MyView` into `Namespace_MyView`
-    /// so a generated struct name is always a valid, unique identifier —
-    /// needed only for a name that might contain dots, i.e. one that came
-    /// from an extension's extended type rather than a type declaration's
-    /// own simple name.
+    /// Turns an extended type's spelling into something usable as part of
+    /// a plain identifier. Characters that can't appear in an identifier
+    /// (dots, generic brackets, sugar, whitespace, backticks) are escaped
+    /// as `_x<hex>_`, and an underscore already in the name is doubled, so
+    /// `Namespace.MyView` becomes `Namespace_x2E_MyView` and `[MyView]`
+    /// becomes `_x5B_MyView_x5D_`.
+    ///
+    /// The encoding is deliberately one-to-one rather than just readable:
+    /// the result feeds `makeUniqueName(_:)`, whose output depends only on
+    /// the string it's given, so two different spellings that sanitized to
+    /// the same thing (e.g. `[MyView]` and `MyView`, or `Namespace.MyView`
+    /// and `Namespace_MyView`) would produce clashing declarations.
+    ///
+    /// Only needed for an extension's extended type, which (unlike a type
+    /// declaration's own name) can be any type spelling at all.
     static func sanitizedIdentifier(from typeName: String) -> String {
-        typeName.replacing(".", with: "_")
+        typeName.unicodeScalars.map { scalar in
+            if scalar == "_" {
+                return "__"
+            }
+            // Prefixing with a letter checks whether the character can
+            // *continue* an identifier; a type spelling always starts with
+            // a character that can also start one, or gets escaped here.
+            if "a\(scalar)".isValidSwiftIdentifier(for: .variableName) {
+                return String(scalar)
+            }
+            return "_x\(String(scalar.value, radix: 16, uppercase: true))_"
+        }
+        .joined()
+    }
+
+    /// The human-readable title for a type's previews: its spelling with
+    /// the backticks removed, so a raw-identifier type `` `My View` ``
+    /// (or an extension of `` Feature.`My View` ``) is titled `My View`
+    /// (`Feature.My View`) rather than showing the quoting. Backticks in a
+    /// type spelling only ever delimit identifiers, so nothing else is
+    /// lost. Callers emit the result as a string literal via
+    /// `\(literal:)`, which escapes any `"` or `\\` left in it.
+    static func previewTitle(forType typeName: String) -> String {
+        typeName.replacing("`", with: "")
+    }
+
+    /// Renders `name` as a declaration name: as-is if it's a valid plain
+    /// identifier, otherwise wrapped in backticks as a raw identifier
+    /// (e.g. a type itself declared as `` `My View` ``).
+    static func declarationName(_ name: String) -> String {
+        name.isValidSwiftIdentifier(for: .variableName) ? name : "`\(name)`"
     }
 }
 

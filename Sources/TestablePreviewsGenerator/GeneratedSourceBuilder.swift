@@ -5,9 +5,16 @@ enum GeneratedSourceBuilder {
     /// - Parameter conformingTypeNames: each conforming type's fully
     ///   namespaced name (e.g. `"GreetingCard"` or `"Feature.GreetingCard"`),
     ///   as written in source. Duplicates are harmless — the generated
-    ///   `switch` just gets one `case` per unique name.
+    ///   `switch` just gets one `case` per unique name. A name spelled
+    ///   with backticks (e.g. ``"Feature.`My View`"``) is matched both as
+    ///   written and with the backticks removed (`"Feature.My View"`), and
+    ///   spellings differing only in backticks share a single `case`.
     static func makeSource(conformingTypeNames: [String]) -> String {
-        let sortedNames = Set(conformingTypeNames).sorted()
+        // Keyed by the backtick-free tag. Any one spelling in a group is
+        // fine to use as the type reference, since backticks around an
+        // identifier don't change which type it names.
+        let spellingsByTag = Dictionary(grouping: Set(conformingTypeNames), by: unquotedTag(for:))
+        let sortedTags = spellingsByTag.keys.sorted()
 
         // Deliberately a `switch` over each concrete type name, rather than
         // a lookup through `conformingTypes`. `conformingTypes`' value type,
@@ -25,12 +32,15 @@ enum GeneratedSourceBuilder {
         // touch a value substituted into it afterward — only string content
         // actually present in the outer literal gets dedented.
         let resolveTestPreviewBody: String
-        if sortedNames.isEmpty {
+        if sortedTags.isEmpty {
             resolveTestPreviewBody = "        return nil"
         } else {
-            let cases = sortedNames
-                .map { name in
-                    "        case \(swiftStringLiteral(name)):\n"
+            let cases = sortedTags
+                .map { tag in
+                    let spellings = spellingsByTag[tag, default: []].sorted()
+                    let name = spellings.first ?? tag
+                    let labels = Set(spellings + [tag]).sorted().map(swiftStringLiteral).joined(separator: ", ")
+                    return "        case \(labels):\n"
                     + "            guard let data = \(name).previewData.first(where: { $0.description == dataTag })?.data else { return nil }\n"
                     + "            return AnyView(\(name).previewBuilder(data: data))"
                 }
@@ -106,6 +116,13 @@ enum GeneratedSourceBuilder {
             #endif
         }
         """
+    }
+
+    /// The view tag for a type spelling with its backticks removed, e.g.
+    /// ``Feature.`My View` `` → `Feature.My View`. Backticks in a type
+    /// spelling only ever delimit identifiers, so nothing else is lost.
+    private static func unquotedTag(for typeName: String) -> String {
+        typeName.replacingOccurrences(of: "`", with: "")
     }
 
     /// Renders `value` as a double-quoted Swift string literal, escaping

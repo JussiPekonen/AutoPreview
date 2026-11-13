@@ -16,6 +16,7 @@ let package = Package(
         .macro(
             name: "AutoPreviewMacros",
             dependencies: [
+                .product(name: "SwiftParser", package: "swift-syntax"),
                 .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
                 .product(name: "SwiftCompilerPlugin", package: "swift-syntax")
             ]

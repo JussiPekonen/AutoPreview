@@ -66,7 +66,7 @@ struct LegacyAutoPreviewMacroTests {
             extension Feature.GreetingCard: AutoPreviewable {
             }
 
-            struct __macro_local_29Feature_GreetingCard_PreviewsfMu_: PreviewProvider {
+            struct __macro_local_33Feature_x2E_GreetingCard_PreviewsfMu_: PreviewProvider {
                 static var previews: some View {
                     Feature.GreetingCard.autoPreview()
                 }
@@ -74,6 +74,83 @@ struct LegacyAutoPreviewMacroTests {
             """,
             macros: testMacros
         )
+    }
+
+    @Test("Names a backtick-escaped keyword type's struct after its bare name")
+    func expansionOnKeywordNamedType() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            struct `class` {
+            }
+            """,
+            expandedSource: """
+            struct `class` {
+            }
+
+            struct class_Previews: PreviewProvider {
+                static var previews: some View {
+                    `class`.autoPreview()
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Wraps a raw-identifier type's struct name in backticks")
+    func expansionOnRawIdentifierType() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            struct `Greeting Card` {
+            }
+            """,
+            expandedSource: """
+            struct `Greeting Card` {
+            }
+
+            struct `Greeting Card_Previews`: PreviewProvider {
+                static var previews: some View {
+                    `Greeting Card`.autoPreview()
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Escapes generic and sugared extended types into a valid struct name", arguments: [
+        ("Wrapper<GreetingCard>", "__macro_local_38Wrapper_x3C_GreetingCard_x3E__PreviewsfMu_"),
+        ("[GreetingCard]", "__macro_local_31_x5B_GreetingCard_x5D__PreviewsfMu_"),
+        ("Feature.`GreetingCard`", "__macro_local_43Feature_x2E__x60_GreetingCard_x60__PreviewsfMu_"),
+    ])
+    func expansionOnUnusualExtendedType(extendedType: String, structName: String) {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            extension \(extendedType): AutoPreviewable {
+            }
+            """,
+            expandedSource: """
+            extension \(extendedType): AutoPreviewable {
+            }
+
+            struct \(structName): PreviewProvider {
+                static var previews: some View {
+                    \(extendedType).autoPreview()
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Sanitizes distinct extended-type spellings to distinct names")
+    func sanitizingIsOneToOne() {
+        let spellings = ["GreetingCard", "[GreetingCard]", "Feature.GreetingCard", "Feature_GreetingCard", "Feature__GreetingCard"]
+        let sanitized = spellings.map(AutoPreviewMacroArgument.sanitizedIdentifier(from:))
+        #expect(Set(sanitized).count == spellings.count)
     }
 
     @Test("Attaching to something that names no type at all emits an error and expands to nothing")

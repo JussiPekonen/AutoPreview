@@ -83,7 +83,7 @@ public struct AutoPreviewMacro: PeerMacro, Sendable {
     ) -> DeclSyntax {
         #if swift(>=6.4)
         return """
-        #Preview("\(raw: typeName)", arguments: \(raw: typeName).previewData) { item in
+        #Preview(\(literal: AutoPreviewMacroArgument.previewTitle(forType: typeName)), arguments: \(raw: typeName).previewData) { item in
             \(raw: typeName).previewBuilder(data: item.data)
         }
         """

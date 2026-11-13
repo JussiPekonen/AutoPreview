@@ -62,16 +62,25 @@ public struct LegacyAutoPreviewMacro: PeerMacro, Sendable {
     /// `makeUniqueName(_:)` are exempt from that coverage check, so an
     /// extension gets one of those instead; nothing refers to the struct
     /// by name anyway — each preview's display name comes from
-    /// `autoPreview()` itself.
+    /// `autoPreview()` itself. The extended type's spelling is sanitized
+    /// first, since `makeUniqueName(_:)` embeds it verbatim — a `<`,
+    /// space, or backtick in it would break the generated declaration.
+    ///
+    /// A type declaration's struct, on the other hand, must be named
+    /// exactly `<name>_Previews` to be covered, where `<name>` is the
+    /// type's *bare* identifier — `` `class` `` covers `class_Previews`,
+    /// not `` `class`_Previews ``. That is always a valid identifier
+    /// unless the type itself is a raw identifier (`` `My View` ``), in
+    /// which case the struct name needs backticks too.
     private static func previewsStructName(
         forType typeName: String,
         attachedTo declaration: some DeclSyntaxProtocol,
         in context: some MacroExpansionContext
     ) -> String {
-        let readableName = "\(AutoPreviewMacroArgument.sanitizedIdentifier(from: typeName))_Previews"
-        guard declaration.is(ExtensionDeclSyntax.self) else {
-            return readableName
+        if let identifier = declaration.asProtocol(NamedDeclSyntax.self)?.name.identifier {
+            return AutoPreviewMacroArgument.declarationName("\(identifier.name)_Previews")
         }
-        return context.makeUniqueName(readableName).text
+        let sanitizedName = "\(AutoPreviewMacroArgument.sanitizedIdentifier(from: typeName))_Previews"
+        return context.makeUniqueName(sanitizedName).text
     }
 }

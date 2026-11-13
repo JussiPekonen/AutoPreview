@@ -123,6 +123,46 @@ struct AutoPreviewMacroTests {
         )
     }
 
+    @Test("Titles a raw-identifier type's previews without its backticks")
+    func expansionOnRawIdentifierType() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            struct `Greeting Card` {
+            }
+            """,
+            expandedSource: """
+            struct `Greeting Card` {
+            }
+
+            #Preview("Greeting Card", arguments: `Greeting Card`.previewData) { item in
+                `Greeting Card`.previewBuilder(data: item.data)
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Titles an extension of a backtick-qualified type without its backticks")
+    func expansionOnBacktickedExtension() {
+        assertMacroExpansion(
+            """
+            @AutoPreview
+            extension Feature.`Greeting Card`: AutoPreviewable {
+            }
+            """,
+            expandedSource: """
+            extension Feature.`Greeting Card`: AutoPreviewable {
+            }
+
+            #Preview("Feature.Greeting Card", arguments: Feature.`Greeting Card`.previewData) { item in
+                Feature.`Greeting Card`.previewBuilder(data: item.data)
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
     @Test("Attaching to something that names no type at all emits an error and expands to nothing")
     func nonTypeDeclarationEmitsDiagnostic() {
         assertMacroExpansion(
@@ -257,7 +297,7 @@ struct AutoPreviewMacroTests {
             extension Feature.GreetingCard: AutoPreviewable {
             }
 
-            struct __macro_local_29Feature_GreetingCard_PreviewsfMu_: PreviewProvider {
+            struct __macro_local_33Feature_x2E_GreetingCard_PreviewsfMu_: PreviewProvider {
                 static var previews: some View {
                     Feature.GreetingCard.autoPreview()
                 }
