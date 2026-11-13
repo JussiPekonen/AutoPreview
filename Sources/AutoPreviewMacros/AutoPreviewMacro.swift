@@ -63,7 +63,7 @@ import SwiftSyntaxMacros
 /// its own plain executable rather than as an in-process compiler plugin,
 /// so a SourceKit failure there fails one build step instead of taking
 /// down macro expansion itself.
-public struct AutoPreviewMacro: PeerMacro, Sendable {
+public struct AutoPreviewMacro: PeerMacro, MemberMacro, Sendable {
     public static func expansion(
         of node: AttributeSyntax,
         providingPeersOf declaration: some DeclSyntaxProtocol,
@@ -73,22 +73,33 @@ public struct AutoPreviewMacro: PeerMacro, Sendable {
             return []
         }
 
-        return [previewDeclaration(forType: typeName, attachedTo: declaration, in: context)]
+        #if swift(>=6.4)
+        return [
+            """
+            #Preview(\(literal: AutoPreviewMacroArgument.previewTitle(forType: typeName)), arguments: \(raw: typeName).previewData) { item in
+                \(raw: typeName).previewBuilder(data: item.data)
+            }
+            """
+        ]
+        #else
+        return LegacyAutoPreviewMacro.peerDeclarations(forType: typeName, attachedTo: declaration, in: context)
+        #endif
     }
 
-    private static func previewDeclaration(
-        forType typeName: String,
-        attachedTo declaration: some DeclSyntaxProtocol,
+    /// Only the legacy expansion has members: an extension's
+    /// `PreviewProvider` struct, or a nested type's, which can't be a peer (see
+    /// `LegacyAutoPreviewMacro.memberDeclarations(attachedTo:in:)`). The
+    /// `#Preview` block is unnamed, so it's always a peer.
+    public static func expansion(
+        of node: AttributeSyntax,
+        providingMembersOf declaration: some DeclGroupSyntax,
+        conformingTo protocols: [TypeSyntax],
         in context: some MacroExpansionContext
-    ) -> DeclSyntax {
+    ) throws -> [DeclSyntax] {
         #if swift(>=6.4)
-        return """
-        #Preview(\(literal: AutoPreviewMacroArgument.previewTitle(forType: typeName)), arguments: \(raw: typeName).previewData) { item in
-            \(raw: typeName).previewBuilder(data: item.data)
-        }
-        """
+        return []
         #else
-        return LegacyAutoPreviewMacro.previewDeclaration(forType: typeName, attachedTo: declaration, in: context)
+        return LegacyAutoPreviewMacro.memberDeclarations(attachedTo: declaration, in: context)
         #endif
     }
 }

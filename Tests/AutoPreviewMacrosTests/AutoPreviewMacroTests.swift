@@ -237,7 +237,7 @@ struct AutoPreviewMacroTests {
         )
     }
 
-    @Test("Refers to a nested type by its simple name, resolved correctly from the enclosing scope")
+    @Test("Names a nested type's struct <super>_<sub>_PreviewProvider, nested inside it")
     func expansionOnNestedType() {
         assertMacroExpansion(
             """
@@ -250,11 +250,11 @@ struct AutoPreviewMacroTests {
             expandedSource: """
             enum Feature {
                 struct GreetingCard {
-                }
 
-                struct GreetingCard_Previews: PreviewProvider {
-                    static var previews: some View {
-                        GreetingCard.autoPreview()
+                    struct Feature_GreetingCard_PreviewProvider: PreviewProvider {
+                        static var previews: some View {
+                            GreetingCard.autoPreview()
+                        }
                     }
                 }
             }
@@ -273,11 +273,11 @@ struct AutoPreviewMacroTests {
             """,
             expandedSource: """
             extension GreetingCard: AutoPreviewable {
-            }
 
-            struct __macro_local_21GreetingCard_PreviewsfMu_: PreviewProvider {
-                static var previews: some View {
-                    GreetingCard.autoPreview()
+                struct GreetingCard_Previews: PreviewProvider {
+                    static var previews: some View {
+                        GreetingCard.autoPreview()
+                    }
                 }
             }
             """,
@@ -295,11 +295,11 @@ struct AutoPreviewMacroTests {
             """,
             expandedSource: """
             extension Feature.GreetingCard: AutoPreviewable {
-            }
 
-            struct __macro_local_33Feature_x2E_GreetingCard_PreviewsfMu_: PreviewProvider {
-                static var previews: some View {
-                    Feature.GreetingCard.autoPreview()
+                struct Feature_GreetingCard_PreviewProvider: PreviewProvider {
+                    static var previews: some View {
+                        Feature.GreetingCard.autoPreview()
+                    }
                 }
             }
             """,

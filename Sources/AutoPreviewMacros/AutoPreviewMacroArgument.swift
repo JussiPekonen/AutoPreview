@@ -61,14 +61,15 @@ enum AutoPreviewMacroArgument {
     /// `Namespace.MyView` becomes `Namespace_x2E_MyView` and `[MyView]`
     /// becomes `_x5B_MyView_x5D_`.
     ///
-    /// The encoding is deliberately one-to-one rather than just readable:
-    /// the result feeds `makeUniqueName(_:)`, whose output depends only on
-    /// the string it's given, so two different spellings that sanitized to
-    /// the same thing (e.g. `[MyView]` and `MyView`, or `Namespace.MyView`
-    /// and `Namespace_MyView`) would produce clashing declarations.
+    /// The encoding is deliberately one-to-one rather than just readable,
+    /// so two different spellings (e.g. `[MyView]` and `MyView`, or
+    /// `Namespace.MyView` and `Namespace_MyView`) never sanitize to the
+    /// same name.
     ///
     /// Only needed for an extension's extended type, which (unlike a type
-    /// declaration's own name) can be any type spelling at all.
+    /// declaration's own name) can be any type spelling at all — and only
+    /// when that spelling doesn't end in a plain identifier to name the
+    /// generated struct after instead (e.g. sugar like `[MyView]`).
     static func sanitizedIdentifier(from typeName: String) -> String {
         typeName.unicodeScalars.map { scalar in
             if scalar == "_" {

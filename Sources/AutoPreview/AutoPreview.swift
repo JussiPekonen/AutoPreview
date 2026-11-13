@@ -41,7 +41,15 @@
 /// type (or extension) that doesn't conform simply fails to compile once
 /// the generated code above references
 /// `previewData`/`previewBuilder(data:)` on it.
+///
+/// Below Swift 6.4, a nested type's struct is named
+/// `<super>_<sub>_PreviewProvider` instead (`Feature.MyView` gets
+/// `Feature_MyView_PreviewProvider`). For an extension or a nested type,
+/// the struct is nested inside it (`MyView.MyView_Previews`,
+/// `Feature.MyView.Feature_MyView_PreviewProvider`), since a peer of one
+/// of those can't be given a name derived from the type.
 @attached(peer, names: suffixed(_Previews))
+@attached(member, names: arbitrary)
 public macro AutoPreview() =
     #externalMacro(
         module: "AutoPreviewMacros",

@@ -42,11 +42,11 @@ struct LegacyAutoPreviewMacroTests {
             """,
             expandedSource: """
             extension GreetingCard: AutoPreviewable {
-            }
 
-            struct __macro_local_21GreetingCard_PreviewsfMu_: PreviewProvider {
-                static var previews: some View {
-                    GreetingCard.autoPreview()
+                struct GreetingCard_Previews: PreviewProvider {
+                    static var previews: some View {
+                        GreetingCard.autoPreview()
+                    }
                 }
             }
             """,
@@ -54,7 +54,7 @@ struct LegacyAutoPreviewMacroTests {
         )
     }
 
-    @Test("Sanitizes a qualified extended type into a valid, unique struct name")
+    @Test("Names a qualified extended type's struct <super>_<sub>_PreviewProvider")
     func expansionOnQualifiedExtension() {
         assertMacroExpansion(
             """
@@ -64,11 +64,11 @@ struct LegacyAutoPreviewMacroTests {
             """,
             expandedSource: """
             extension Feature.GreetingCard: AutoPreviewable {
-            }
 
-            struct __macro_local_33Feature_x2E_GreetingCard_PreviewsfMu_: PreviewProvider {
-                static var previews: some View {
-                    Feature.GreetingCard.autoPreview()
+                struct Feature_GreetingCard_PreviewProvider: PreviewProvider {
+                    static var previews: some View {
+                        Feature.GreetingCard.autoPreview()
+                    }
                 }
             }
             """,
@@ -120,10 +120,12 @@ struct LegacyAutoPreviewMacroTests {
         )
     }
 
-    @Test("Escapes generic and sugared extended types into a valid struct name", arguments: [
-        ("Wrapper<GreetingCard>", "__macro_local_38Wrapper_x3C_GreetingCard_x3E__PreviewsfMu_"),
-        ("[GreetingCard]", "__macro_local_31_x5B_GreetingCard_x5D__PreviewsfMu_"),
-        ("Feature.`GreetingCard`", "__macro_local_43Feature_x2E__x60_GreetingCard_x60__PreviewsfMu_"),
+    @Test("Names an unusual extended type's struct after its name components, or escapes it if it has none", arguments: [
+        ("Wrapper<GreetingCard>", "Wrapper_Previews"),
+        ("Feature.`GreetingCard`", "Feature_GreetingCard_PreviewProvider"),
+        ("Feature.`Greeting Card`", "`Feature_Greeting Card_PreviewProvider`"),
+        ("App.Feature.GreetingCard", "App_Feature_GreetingCard_PreviewProvider"),
+        ("[GreetingCard]", "_x5B_GreetingCard_x5D__Previews"),
     ])
     func expansionOnUnusualExtendedType(extendedType: String, structName: String) {
         assertMacroExpansion(
@@ -134,11 +136,67 @@ struct LegacyAutoPreviewMacroTests {
             """,
             expandedSource: """
             extension \(extendedType): AutoPreviewable {
-            }
 
-            struct \(structName): PreviewProvider {
-                static var previews: some View {
-                    \(extendedType).autoPreview()
+                struct \(structName): PreviewProvider {
+                    static var previews: some View {
+                        \(extendedType).autoPreview()
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Counts an enclosing extension's extended type as part of a nested type's name")
+    func expansionInsideExtension() {
+        assertMacroExpansion(
+            """
+            extension App.Feature {
+                @AutoPreview
+                struct GreetingCard {
+                }
+            }
+            """,
+            expandedSource: """
+            extension App.Feature {
+                struct GreetingCard {
+
+                    struct App_Feature_GreetingCard_PreviewProvider: PreviewProvider {
+                        static var previews: some View {
+                            GreetingCard.autoPreview()
+                        }
+                    }
+                }
+            }
+            """,
+            macros: testMacros
+        )
+    }
+
+    @Test("Treats a type declared inside a function as top-level")
+    func expansionOnLocalType() {
+        assertMacroExpansion(
+            """
+            enum Feature {
+                func makeView() {
+                    @AutoPreview
+                    struct GreetingCard {
+                    }
+                }
+            }
+            """,
+            expandedSource: """
+            enum Feature {
+                func makeView() {
+                    struct GreetingCard {
+                    }
+
+                    struct GreetingCard_Previews: PreviewProvider {
+                        static var previews: some View {
+                            GreetingCard.autoPreview()
+                        }
+                    }
                 }
             }
             """,
